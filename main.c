@@ -216,7 +216,7 @@ void send_rtty_packet() {
   uint8_t lon_d = (uint8_t) abs(gpsData.lon_raw / 10000000);
   uint32_t lon_fl = (uint32_t) abs(abs(gpsData.lon_raw) - lon_d * 10000000) / 1000;
 
-  sprintf(buf_rtty, "$$$%s,%d,%02u:%02u:%02u,%s%d.%04ld,%s%d.%04ld,%ld,%ld,%s,%d,%d.%d,%d,%d,%d,%02x",
+  sprintf(buf_rtty, "$$$$%s,%d,%02u:%02u:%02u,%s%d.%04ld,%s%d.%04ld,%ld,%ld,%s,%d,%d.%d,%d,%d,%d,%02x",
 			  callsign,
 			  send_cun,
               gpsData.hours, gpsData.minutes, gpsData.seconds,
