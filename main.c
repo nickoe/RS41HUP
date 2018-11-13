@@ -20,6 +20,7 @@
 #include "ublox.h"
 #include "delay.h"
 #include "aprs.h"
+#include "locator.h"
 ///////////////////////////// test mode /////////////
 const unsigned char test = 0; // 0 - normal, 1 - short frame only cunter, height, flag
 char callsign[15] = {CALLSIGN};
@@ -36,6 +37,7 @@ volatile int adc_bottom = 2000;
 volatile char flaga = 0;
 uint16_t CRC_rtty = 0x12ab;  //checksum
 char buf_rtty[200];
+char locator[13];
 
 volatile unsigned char pun = 0;
 volatile unsigned int cun = 10;
@@ -215,6 +217,9 @@ void send_rtty_packet() {
   uint32_t lat_fl = (uint32_t) abs(abs(gpsData.lat_raw) - lat_d * 10000000) / 1000;
   uint8_t lon_d = (uint8_t) abs(gpsData.lon_raw / 10000000);
   uint32_t lon_fl = (uint32_t) abs(abs(gpsData.lon_raw) - lon_d * 10000000) / 1000;
+  if (RTTY_WWL) {
+    longlat2locator(gpsData.lon_raw, gpsData.lat_raw, locator);
+  }
 
   sprintf(buf_rtty, "$$$$%s,%d,%02u:%02u:%02u,%s%d.%04ld,%s%d.%04ld,%ld,%ld,%s,%d,%d.%d,%d,%d,%d,%02x",
 			  callsign,
@@ -224,7 +229,7 @@ void send_rtty_packet() {
               gpsData.lon_raw < 0 ? "-" : "", lon_d, lon_fl,
               (gpsData.alt_raw / 1000),
               gpsData.speed_raw,
-              rtty_comment,
+              RTTY_WWL ? locator : rtty_comment,
               si4032_temperature,
               voltage/100, voltage-voltage/100*100,
               gpsData.sats_raw,

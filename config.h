@@ -37,6 +37,8 @@
 
 #define APRS_COMMENT " Hello from the sky!"
 #define RTTY_COMMENT " Hello from the sky!"				// max. 25 characters
+#define RTTY_WWL 1 // Send WWL instead of the comment
+
 #define RTTY_TO_APRS_RATIO 5 //transmit APRS packet with each x RTTY packet
 
 //*************TX Frequencies********************
@@ -73,6 +75,11 @@
 
 //********** Frame Delay in msec**********************
 #define TX_DELAY  5000
+
+// World Wide Locator pairs (precision)
+// max. 6 (12 characters WWL)
+#define PAIR_COUNT 4
+
 #endif
 
 #endif //RS41HUP_CONFIG_H
