@@ -221,23 +221,33 @@ void send_rtty_packet() {
     longlat2locator(gpsData.lon_raw, gpsData.lat_raw, locator);
   }
 
-  sprintf(buf_rtty, "$$$$%s,%d,%02u:%02u:%02u,%s%d.%04ld,%s%d.%04ld,%ld,%ld,%s,%d,%d.%d,%d,%d,%d,%02x",
-			  callsign,
-			  send_cun,
-              gpsData.hours, gpsData.minutes, gpsData.seconds,
-              gpsData.lat_raw < 0 ? "-" : "", lat_d, lat_fl,
-              gpsData.lon_raw < 0 ? "-" : "", lon_d, lon_fl,
-              (gpsData.alt_raw / 1000),
-              gpsData.speed_raw,
-              RTTY_WWL ? locator : rtty_comment,
-              si4032_temperature,
-              voltage/100, voltage-voltage/100*100,
-              gpsData.sats_raw,
-              gpsData.ok_packets,
-              gpsData.bad_packets,
-              flaga);
+  int packetLength = sprintf(buf_rtty, "$$$$%s,%d", callsign, send_cun);
+              if (SEND_RTTY_TIME)
+                packetLength += sprintf(buf_rtty + packetLength, ",%02u:%02u:%02u", gpsData.hours, gpsData.minutes, gpsData.seconds);
+              if (SEND_RTTY_LATLON)
+                packetLength += sprintf(buf_rtty + packetLength, ",%s%d.%04ld,%s%d.%04ld",
+                  gpsData.lat_raw < 0 ? "-" : "", lat_d, lat_fl,
+                  gpsData.lon_raw < 0 ? "-" : "", lon_d, lon_fl);
+              if (SEND_RTTY_HEIGHT)
+                packetLength += sprintf(buf_rtty + packetLength, ",%ld", (gpsData.alt_raw / 1000));
+              if (SEND_RTTY_SPEED)
+                packetLength += sprintf(buf_rtty + packetLength, ",%ld", gpsData.speed_raw);
+              if (SEND_RTTY_MESSAGE)
+                packetLength += sprintf(buf_rtty + packetLength, ",%s", RTTY_WWL ? locator : rtty_comment);
+              if (SEND_RTTY_TEMPERATURE)
+                packetLength += sprintf(buf_rtty + packetLength, ",%d", si4032_temperature);
+              if (SEND_RTTY_VOLTAGE)
+                packetLength += sprintf(buf_rtty + packetLength, ",%d.%d", voltage/100, voltage-voltage/100*100);
+              if (SEND_RTTY_SATELLITES)
+                packetLength += sprintf(buf_rtty + packetLength, ",%d", gpsData.sats_raw);
+              if (SEND_RTTY_GPSDATA)
+                packetLength += sprintf(buf_rtty + packetLength, ",%d,%d,%02x",
+                  gpsData.ok_packets,
+                  gpsData.bad_packets,
+                  flaga);
+
   CRC_rtty = gps_CRC16_checksum(buf_rtty + 4);
-  sprintf(buf_rtty, "%s*%04X\n", buf_rtty, CRC_rtty & 0xffff);
+  sprintf(buf_rtty + packetLength, "*%04X\n", CRC_rtty & 0xffff);
   rtty_buf = buf_rtty;
   radio_enable_tx();
   tx_on = 1;

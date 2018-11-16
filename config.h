@@ -1,5 +1,6 @@
 //
 // Created by SQ5RWU on 2016-12-24.
+// Extended by OK1TE
 //
 
 #ifndef RS41HUP_CONFIG_H
@@ -11,8 +12,16 @@
 
 
 //**************RTTY Data Format**********************
-// $$<callsign>,<frame>,<hh:mm:ss>,<latitude>,<longitude>,<height>,<speed>,<rtty comment>,<radio chip temperature (°C)>,<battery voltage>,<used gps satellites>,<good gps datasets>,<bad gps datasets>,<gps fix>,<CRC>
-
+// $$$<callsign>,<frame#>,[<hh:mm:ss>],[<latitude>,<longitude>],[<height>],[<speed>],[<rtty comment>],[<radio chip temperature (°C)>],[<battery voltage>],[<used gps satellites>],[<good gps datasets>,<bad gps datasets>,<gps fix flags>]*<CRC>
+#define SEND_RTTY_TIME 1
+#define SEND_RTTY_LATLON 1
+#define SEND_RTTY_HEIGHT 1
+#define SEND_RTTY_SPEED 1
+#define SEND_RTTY_MESSAGE 1
+#define SEND_RTTY_TEMPERATURE 1
+#define SEND_RTTY_VOLTAGE 1
+#define SEND_RTTY_SATELLITES 1
+#define SEND_RTTY_GPSDATA 1
 
 //**************config**********************
 #define CALLSIGN "NOCALL" // put your RTTY callsign here, max. 15 characters
