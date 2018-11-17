@@ -30,6 +30,9 @@ All configs in ```config.h```
 * ```APRS_CALLSIGN``` APRS callsign, 6 characters. If your callsign is shorter add spaces
 * ```APRS_SSID``` APRS SSID
 * ```APRS_COMMENT``` APRS comment
+* ```RTTY_COMMENT``` RTTY comment
+* ```RTTY_WWL``` Send WWL instead of the RTTY comment
+* ```PAIR_COUNT``` World Wide Locator pairs (precision)
 * ```RTTY_TO_APRS_RATIO``` number of RTTY frames between each APRS frame
 * ```RTTY_FREQUENCY``` RTTY frequency in MHz
 * ```APRS_FREQUENCY``` APRS frequency in MHz
@@ -50,6 +53,9 @@ Have a nice day ;)
  * 23.01.2017 - Test APRS code, small fixes in GPS code by SQ5RWU
  * 06.06.2017 - APRS code fix, some code cleanup
  * June 2017 - starting with Linux support, making configuration more flexible by DF8OE
+ * November 2018 by OK1TE
+     * Optionally alter the RTTY comment with the World Wide Locator
+     * Made the RTTY packet content configurable
 
 
 #TODO
