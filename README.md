@@ -26,6 +26,7 @@ make
 # Configuration
 All configs in ```config.h```
 
+* ```RTTY_SEND_<value>``` Include <value> into the RTTY packet
 * ```CALLSIGN``` RTTY callsign
 * ```APRS_CALLSIGN``` APRS callsign, 6 characters. If your callsign is shorter add spaces
 * ```APRS_SSID``` APRS SSID
@@ -33,13 +34,13 @@ All configs in ```config.h```
 * ```RTTY_COMMENT``` RTTY comment
 * ```RTTY_WWL``` Send WWL instead of the RTTY comment
 * ```PAIR_COUNT``` World Wide Locator pairs (precision)
-* ```RTTY_TO_APRS_RATIO``` number of RTTY frames between each APRS frame
+* ```RTTY_TO_APRS_RATIO``` Number of RTTY frames between each APRS frame
 * ```RTTY_FREQUENCY``` RTTY frequency in MHz
 * ```APRS_FREQUENCY``` APRS frequency in MHz
 * ```RTTY_DEVIATION``` RTTY shift configurable in 270Hz steps
 * ```RTTY_SPEED``` RTTY speed in bauds
 * ```RTTY_7BIT``` Use 7 bit RTTY
-* ```RTTY_USE_2_STOP_BITS``` use 2 stop bits
+* ```RTTY_USE_2_STOP_BITS``` Use 2 stop bits
 * ```TX_POWER``` Power 0-7, (7 means 42.95 mW@434.150 MHz measured on E4406A)
 * ```TX_DELAY``` Delay between frames in milliseconds
 * ```ALLOW_DISABLE_BY_BUTTON``` Allow disabling device using button
@@ -47,7 +48,7 @@ All configs in ```config.h```
 
 Have a nice day ;)
 
-#Changelog
+# Changelog
  * 14.12.2016 - Reverse engineeded connections, initial hard work, resulting in working RTTY by SQ7FJB
  * 07.01.2017 - GPS now using proprietiary UBLOX protocol, more elastic code to set working frequency by SQ5RWU
  * 23.01.2017 - Test APRS code, small fixes in GPS code by SQ5RWU
@@ -56,9 +57,10 @@ Have a nice day ;)
  * November 2018 by OK1TE
      * Optionally alter the RTTY comment with the World Wide Locator
      * Made the RTTY packet content configurable
+     * Optionally turn off RTTY or APRS
 
 
-#TODO
+# TODO
  * Adding support for EmbiTZ IDE
  * Adding support for platform independent IDE Eclipse
  * More APRS config options

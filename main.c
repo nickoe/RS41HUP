@@ -23,7 +23,7 @@
 #include "locator.h"
 ///////////////////////////// test mode /////////////
 const unsigned char test = 0; // 0 - normal, 1 - short frame only cunter, height, flag
-char callsign[15] = {CALLSIGN};
+char callsign[15] = {RTTY_CALLSIGN};
 char rtty_comment[25] = {RTTY_COMMENT};
 
 #define GREEN  GPIO_Pin_7
@@ -179,19 +179,12 @@ int main(void) {
   while (1) {
     if (tx_on == 0 && tx_enable) {
       if (rtty_before_aprs_left){
-        send_rtty_packet();
+        if (SEND_RTTY) send_rtty_packet();
+        else _delay_ms(TX_DELAY);
         rtty_before_aprs_left --;
       } else {
         rtty_before_aprs_left = RTTY_TO_APRS_RATIO;
-        radio_enable_tx();
-        GPSEntry gpsData;
-        ublox_get_last_data(&gpsData);
-        USART_Cmd(USART1, DISABLE);
-        int8_t temperature = radio_read_temperature();
-        uint16_t voltage = (uint16_t) ADCVal[0] * 600 / 4096;
-        aprs_send_position(gpsData, temperature, voltage);
-        USART_Cmd(USART1, ENABLE);
-        radio_disable_tx();
+        if (SEND_APRS) send_aprs_packet();
       }
 
     } else {
@@ -268,6 +261,18 @@ uint16_t gps_CRC16_checksum(char *string) {
     }
   }
   return crc;
+}
+
+void send_aprs_packet() {
+  radio_enable_tx();
+  GPSEntry gpsData;
+  ublox_get_last_data(&gpsData);
+  USART_Cmd(USART1, DISABLE);
+  int8_t temperature = radio_read_temperature();
+  uint16_t voltage = (uint16_t) ADCVal[0] * 600 / 4096;
+  aprs_send_position(gpsData, temperature, voltage);
+  USART_Cmd(USART1, ENABLE);
+  radio_disable_tx();
 }
 
 
