@@ -34,7 +34,7 @@ char status[2] = {'N'};
 int voltage;
 volatile int adc_bottom = 2000;
 
-uint16_t led_timeout = 600 * (1000/RTTY_SPEED); // Approx. 10 minutes
+unsigned int led_timeout = 600 * RTTY_SPEED; // Approx. 10 minutes
 volatile uint8_t led_enabled = 1; // Flag to disable LEDs after a timeout
 
 volatile char flaga = 0;
