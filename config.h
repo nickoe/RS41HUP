@@ -92,6 +92,10 @@
 //********** Frame Delay in msec**********************
 #define TX_DELAY  5000
 
+// Enable/disable LED blinking
+// when set to 0, LEDs will stop blinking approx. 10 minutes after powering on the sonde
+#define LED_ENABLED 1
+
 #endif
 
 #endif //RS41HUP_CONFIG_H

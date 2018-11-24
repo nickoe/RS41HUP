@@ -34,6 +34,9 @@ char status[2] = {'N'};
 int voltage;
 volatile int adc_bottom = 2000;
 
+uint16_t led_timeout = 600 * (1000/RTTY_SPEED); // Approx. 10 minutes
+volatile uint8_t led_enabled = 1; // Flag to disable LEDs after a timeout
+
 volatile char flaga = 0;
 uint16_t CRC_rtty = 0x12ab;  //checksum
 char buf_rtty[200];
@@ -51,6 +54,7 @@ volatile uint8_t disable_armed = 0;
 
 void send_rtty_packet();
 uint16_t gps_CRC16_checksum (char *string);
+void send_aprs_packet();
 
 
 /**
@@ -95,7 +99,7 @@ void TIM2_IRQHandler(void) {
         send_rtty_status = send_rtty((char *) rtty_buf);
         if (!disable_armed){
           if (send_rtty_status == rttyEnd) {
-            GPIO_SetBits(GPIOB, RED);
+            if (led_enabled) GPIO_SetBits(GPIOB, RED);
             if (*(++rtty_buf) == 0) {
               tx_on = 0;
               tx_on_delay = TX_DELAY / (1000/RTTY_SPEED);
@@ -104,10 +108,10 @@ void TIM2_IRQHandler(void) {
             }
           } else if (send_rtty_status == rttyOne) {
             radio_rw_register(0x73, RTTY_DEVIATION, 1);
-            GPIO_SetBits(GPIOB, RED);
+            if (led_enabled) GPIO_SetBits(GPIOB, RED);
           } else if (send_rtty_status == rttyZero) {
             radio_rw_register(0x73, 0x00, 1);
-            GPIO_ResetBits(GPIOB, RED);
+            if (led_enabled) GPIO_ResetBits(GPIOB, RED);
           }
         }
       }
@@ -117,17 +121,19 @@ void TIM2_IRQHandler(void) {
       }
       if (--cun == 0) {
         if (pun) {
-          GPIO_ResetBits(GPIOB, GREEN);
+          if (led_enabled) GPIO_ResetBits(GPIOB, GREEN);
           pun = 0;
         } else {
           if (flaga & 0x80) {
-            GPIO_SetBits(GPIOB, GREEN);
+            if (led_enabled) GPIO_SetBits(GPIOB, GREEN);
           }
           pun = 1;
         }
         cun = 200;
       }
     }
+
+    if (!LED_ENABLED && led_enabled && !--led_timeout) led_enabled = 0;
 
   }
 
@@ -145,7 +151,7 @@ int main(void) {
   delay_init();
   ublox_init();
 
-  GPIO_SetBits(GPIOB, RED);
+  if (led_enabled) GPIO_SetBits(GPIOB, RED);
   USART_SendData(USART3, 0xc);
 
   radio_soft_reset();
@@ -171,10 +177,7 @@ int main(void) {
   tx_enable = 1;
 
   aprs_init();
-  radio_enable_tx();
-
   uint8_t rtty_before_aprs_left = RTTY_TO_APRS_RATIO;
-
 
   while (1) {
     if (tx_on == 0 && tx_enable) {

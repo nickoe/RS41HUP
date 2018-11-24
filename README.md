@@ -26,24 +26,27 @@ make
 # Configuration
 All configs in ```config.h```
 
+* ```RTTY_SEND``` Optionally send RTTY packet every ```TX_DELAY``` ms
 * ```RTTY_SEND_<value>``` Include <value> into the RTTY packet
 * ```CALLSIGN``` RTTY callsign
-* ```APRS_CALLSIGN``` APRS callsign, 6 characters. If your callsign is shorter add spaces
-* ```APRS_SSID``` APRS SSID
-* ```APRS_COMMENT``` APRS comment
 * ```RTTY_COMMENT``` RTTY comment
 * ```RTTY_WWL``` Send WWL instead of the RTTY comment
 * ```PAIR_COUNT``` World Wide Locator pairs (precision)
-* ```RTTY_TO_APRS_RATIO``` Number of RTTY frames between each APRS frame
 * ```RTTY_FREQUENCY``` RTTY frequency in MHz
-* ```APRS_FREQUENCY``` APRS frequency in MHz
 * ```RTTY_DEVIATION``` RTTY shift configurable in 270Hz steps
 * ```RTTY_SPEED``` RTTY speed in bauds
 * ```RTTY_7BIT``` Use 7 bit RTTY
 * ```RTTY_USE_2_STOP_BITS``` Use 2 stop bits
+* ```APRS_SEND``` Optionally send APRS packet every ```TX_DELAY``` * ```RTTY_TO_APRS_RATIO``` ms
+* ```APRS_CALLSIGN``` APRS callsign, 6 characters. If your callsign is shorter add spaces
+* ```APRS_SSID``` APRS SSID
+* ```APRS_COMMENT``` APRS comment
+* ```APRS_FREQUENCY``` APRS frequency in MHz
+* ```RTTY_TO_APRS_RATIO``` Number of RTTY frames between each APRS frame
 * ```TX_POWER``` Power 0-7, (7 means 42.95 mW@434.150 MHz measured on E4406A)
-* ```TX_DELAY``` Delay between frames in milliseconds
 * ```ALLOW_DISABLE_BY_BUTTON``` Allow disabling device using button
+* ```TX_DELAY``` Delay between frames in milliseconds
+* ```LED_ENABLED``` Enable/disable LED blinking
 
 
 Have a nice day ;)
@@ -58,6 +61,7 @@ Have a nice day ;)
      * Optionally alter the RTTY comment with the World Wide Locator
      * Made the RTTY packet content configurable
      * Optionally turn off RTTY or APRS
+     * Optionally turn off LED blinking
 
 
 # TODO
