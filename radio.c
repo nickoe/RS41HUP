@@ -40,7 +40,13 @@ void radio_soft_reset() {
 }
 
 void radio_enable_tx() {
-  radio_rw_register(0x07, 0x48, 1);
+  // Modified to set the PLL and Crystal enable bits to high. Not sure if this makes much differents.
+  radio_rw_register(0x07, 0x4B, 1); 
+}
+
+void radio_inhibit_tx() {
+  // Sleep mode, but with PLL idle mode enabled, in an attempt to reduce drift on key-up.
+  radio_rw_register(0x07, 0x43, 1);
 }
 
 int8_t radio_read_temperature() {

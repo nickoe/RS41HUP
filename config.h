@@ -72,6 +72,15 @@
 #define APRS_COMMENT " Hello from the sky!"
 #define RTTY_TO_APRS_RATIO 5 //transmit APRS packet with each x RTTY packet
 
+//********** Morse (CW)
+#define SEND_MORSE 1 // Set to 0 to disable CW
+#define MORSE_PREFIX "DE NOCALL" // Start of the message
+#define SEND_MORSE_WWL 1 // in <WW-locator>
+#define SEND_MORSE_HEIGHT 0 // ASL <altitude>
+#define SEND_MORSE_VOLTAGE 0 // bat <voltage>
+#define MORSE_SUFFIX " +" // AR^ (end of transmission)
+#define MORSE_WPM 20 // Speed in words per minute
+#define RTTY_TO_MORSE_RATIO 10 // Transmit morse message with each x RTTY packet
 
 //********* power definition**************************
 #define TX_POWER  0 // PWR 0...7 0- MIN ... 7 - MAX

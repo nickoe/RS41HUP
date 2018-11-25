@@ -21,6 +21,7 @@
 #include "delay.h"
 #include "aprs.h"
 #include "locator.h"
+#include "morse.h"
 ///////////////////////////// test mode /////////////
 const unsigned char test = 0; // 0 - normal, 1 - short frame only cunter, height, flag
 char callsign[15] = {RTTY_CALLSIGN};
@@ -31,7 +32,10 @@ char rtty_comment[25] = {RTTY_COMMENT};
 
 unsigned int send_cun;        //frame counter
 char status[2] = {'N'};
-int voltage;
+
+GPSEntry gpsData;
+int8_t si4032_temperature;
+uint16_t voltage;
 volatile int adc_bottom = 2000;
 
 unsigned int led_timeout = 600 * RTTY_SPEED; // Approx. 10 minutes
@@ -39,7 +43,7 @@ volatile uint8_t led_enabled = 1; // Flag to disable LEDs after a timeout
 
 volatile char flaga = 0;
 uint16_t CRC_rtty = 0x12ab;  //checksum
-char buf_rtty[200];
+char buffer[200];
 char locator[13];
 
 volatile unsigned char pun = 0;
@@ -52,9 +56,11 @@ volatile char *rtty_buf;
 volatile uint16_t button_pressed = 0;
 volatile uint8_t disable_armed = 0;
 
-void send_rtty_packet();
+void collect_telemetry_data(void);
+void send_rtty_packet(void);
 uint16_t gps_CRC16_checksum (char *string);
-void send_aprs_packet();
+void send_aprs_packet(void);
+void send_morse_message(void);
 
 
 /**
@@ -92,7 +98,7 @@ void TIM2_IRQHandler(void) {
           button_pressed = 0;
         }
     	if (button_pressed == 0) {
-    	  adc_bottom = ADCVal[1] * 1.1;	// dynamical reference for power down level
+  	   adc_bottom = ADCVal[1] * 1.1;	// dynamical reference for power down level
 		}
       }
       if (tx_on) {
@@ -172,19 +178,24 @@ int main(void) {
 
   // ADC configuration
   radio_rw_register(0x0f, 0x80, 1);
-  rtty_buf = buf_rtty;
+  rtty_buf = buffer;
   tx_on = 0;
   tx_enable = 1;
 
   aprs_init();
   uint8_t rtty_before_aprs_left = RTTY_TO_APRS_RATIO;
+  uint8_t morse_countdown = RTTY_TO_MORSE_RATIO;
 
   while (1) {
     if (tx_on == 0 && tx_enable) {
       if (rtty_before_aprs_left){
+        if (SEND_MORSE && !--morse_countdown) {
+          send_morse_message();
+          morse_countdown = RTTY_TO_MORSE_RATIO;
+        }
         if (SEND_RTTY) send_rtty_packet();
         else _delay_ms(TX_DELAY);
-        rtty_before_aprs_left --;
+        rtty_before_aprs_left--;
       } else {
         rtty_before_aprs_left = RTTY_TO_APRS_RATIO;
         if (SEND_APRS) send_aprs_packet();
@@ -197,54 +208,52 @@ int main(void) {
   }
 }
 
-void send_rtty_packet() {
-  start_bits = RTTY_PRE_START_BITS;
-  int8_t si4032_temperature = radio_read_temperature();
-
+void collect_telemetry_data(void) {
+  si4032_temperature = radio_read_temperature();
   voltage = ADCVal[0] * 600 / 4096;
-  GPSEntry gpsData;
   ublox_get_last_data(&gpsData);
-  if (gpsData.fix >= 3) {
-        flaga |= 0x80;
-      } else {
-        flaga &= ~0x80;
-      }
+  if (gpsData.fix >= 3) flaga |= 0x80;
+  else flaga &= ~0x80;
+  if (RTTY_WWL || SEND_MORSE_WWL)
+    longlat2locator(gpsData.lon_raw, gpsData.lat_raw, locator);
+}
+
+void send_rtty_packet(void) {
+  start_bits = RTTY_PRE_START_BITS;
+  collect_telemetry_data();
   uint8_t lat_d = (uint8_t) abs(gpsData.lat_raw / 10000000);
   uint32_t lat_fl = (uint32_t) abs(abs(gpsData.lat_raw) - lat_d * 10000000) / 1000;
   uint8_t lon_d = (uint8_t) abs(gpsData.lon_raw / 10000000);
   uint32_t lon_fl = (uint32_t) abs(abs(gpsData.lon_raw) - lon_d * 10000000) / 1000;
-  if (RTTY_WWL) {
-    longlat2locator(gpsData.lon_raw, gpsData.lat_raw, locator);
-  }
 
-  int packetLength = sprintf(buf_rtty, "$$$$%s,%d", callsign, send_cun);
-              if (SEND_RTTY_TIME)
-                packetLength += sprintf(buf_rtty + packetLength, ",%02u:%02u:%02u", gpsData.hours, gpsData.minutes, gpsData.seconds);
-              if (SEND_RTTY_LATLON)
-                packetLength += sprintf(buf_rtty + packetLength, ",%s%d.%04ld,%s%d.%04ld",
-                  gpsData.lat_raw < 0 ? "-" : "", lat_d, lat_fl,
-                  gpsData.lon_raw < 0 ? "-" : "", lon_d, lon_fl);
-              if (SEND_RTTY_HEIGHT)
-                packetLength += sprintf(buf_rtty + packetLength, ",%ld", (gpsData.alt_raw / 1000));
-              if (SEND_RTTY_SPEED)
-                packetLength += sprintf(buf_rtty + packetLength, ",%ld", gpsData.speed_raw);
-              if (SEND_RTTY_MESSAGE)
-                packetLength += sprintf(buf_rtty + packetLength, ",%s", RTTY_WWL ? locator : rtty_comment);
-              if (SEND_RTTY_TEMPERATURE)
-                packetLength += sprintf(buf_rtty + packetLength, ",%d", si4032_temperature);
-              if (SEND_RTTY_VOLTAGE)
-                packetLength += sprintf(buf_rtty + packetLength, ",%d.%d", voltage/100, voltage-voltage/100*100);
-              if (SEND_RTTY_SATELLITES)
-                packetLength += sprintf(buf_rtty + packetLength, ",%d", gpsData.sats_raw);
-              if (SEND_RTTY_GPSDATA)
-                packetLength += sprintf(buf_rtty + packetLength, ",%d,%d,%02x",
-                  gpsData.ok_packets,
-                  gpsData.bad_packets,
-                  flaga);
+  int packetLength = sprintf(buffer, "$$$$%s,%d", callsign, send_cun);
+  if (SEND_RTTY_TIME)
+    packetLength += sprintf(buffer + packetLength, ",%02u:%02u:%02u", gpsData.hours, gpsData.minutes, gpsData.seconds);
+  if (SEND_RTTY_LATLON)
+    packetLength += sprintf(buffer + packetLength, ",%s%u.%04lu,%s%u.%04lu",
+      gpsData.lat_raw < 0 ? "-" : "", lat_d, lat_fl,
+      gpsData.lon_raw < 0 ? "-" : "", lon_d, lon_fl);
+  if (SEND_RTTY_HEIGHT)
+    packetLength += sprintf(buffer + packetLength, ",%ld", (gpsData.alt_raw / 1000));
+  if (SEND_RTTY_SPEED)
+    packetLength += sprintf(buffer + packetLength, ",%ld", gpsData.speed_raw);
+  if (SEND_RTTY_MESSAGE)
+    packetLength += sprintf(buffer + packetLength, ",%s", RTTY_WWL ? locator : rtty_comment);
+  if (SEND_RTTY_TEMPERATURE)
+    packetLength += sprintf(buffer + packetLength, ",%d", si4032_temperature);
+  if (SEND_RTTY_VOLTAGE)
+    packetLength += sprintf(buffer + packetLength, ",%d.%02d", voltage/100, voltage-voltage/100*100);
+  if (SEND_RTTY_SATELLITES)
+    packetLength += sprintf(buffer + packetLength, ",%d", gpsData.sats_raw);
+  if (SEND_RTTY_GPSDATA)
+    packetLength += sprintf(buffer + packetLength, ",%d,%d,%02x",
+      gpsData.ok_packets,
+      gpsData.bad_packets,
+      flaga);
 
-  CRC_rtty = gps_CRC16_checksum(buf_rtty + 4);
-  sprintf(buf_rtty + packetLength, "*%04X\n", CRC_rtty & 0xffff);
-  rtty_buf = buf_rtty;
+  CRC_rtty = gps_CRC16_checksum(buffer + 4);
+  sprintf(buffer + packetLength, "*%04X\n", CRC_rtty & 0xffff);
+  rtty_buf = buffer;
   radio_enable_tx();
   tx_on = 1;
 
@@ -266,16 +275,33 @@ uint16_t gps_CRC16_checksum(char *string) {
   return crc;
 }
 
-void send_aprs_packet() {
+void send_aprs_packet(void) {
   radio_enable_tx();
-  GPSEntry gpsData;
-  ublox_get_last_data(&gpsData);
+  collect_telemetry_data();
   USART_Cmd(USART1, DISABLE);
-  int8_t temperature = radio_read_temperature();
-  uint16_t voltage = (uint16_t) ADCVal[0] * 600 / 4096;
-  aprs_send_position(gpsData, temperature, voltage);
+  aprs_send_position(gpsData, si4032_temperature, voltage);
   USART_Cmd(USART1, ENABLE);
   radio_disable_tx();
+}
+
+void send_morse_message(void) {
+  tx_enable = 0;
+  collect_telemetry_data();
+  int messageLength = sprintf(buffer, "%s", MORSE_PREFIX);
+  if (SEND_MORSE_WWL)
+    messageLength += sprintf(buffer + messageLength, " IN %s", locator);
+  if (SEND_MORSE_HEIGHT)
+    messageLength += sprintf(buffer + messageLength, " ASL %ld", (gpsData.alt_raw / 1000));
+  if (SEND_MORSE_VOLTAGE)
+    messageLength += sprintf(buffer + messageLength, " BAT %d.%02d", voltage/100, voltage-voltage/100*100);
+  messageLength += sprintf(buffer + messageLength, "%s", MORSE_SUFFIX);
+
+  // Set CW offset
+  radio_rw_register(0x73, 1, 1);
+
+  sendMorse(buffer);
+  _delay_ms(2000);
+  tx_enable = 1;
 }
 
 

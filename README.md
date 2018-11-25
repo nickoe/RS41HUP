@@ -26,9 +26,9 @@ make
 # Configuration
 All configs in ```config.h```
 
-* ```RTTY_SEND``` Optionally send RTTY packet every ```TX_DELAY``` ms
-* ```RTTY_SEND_<value>``` Include <value> into the RTTY packet
-* ```CALLSIGN``` RTTY callsign
+* ```SEND_RTTY``` Optionally send RTTY packet every ```TX_DELAY``` ms
+* ```SEND_RTTY_<value>``` Include <value> into the RTTY packet
+* ```RTTY_CALLSIGN``` RTTY callsign
 * ```RTTY_COMMENT``` RTTY comment
 * ```RTTY_WWL``` Send WWL instead of the RTTY comment
 * ```PAIR_COUNT``` World Wide Locator pairs (precision)
@@ -37,16 +37,22 @@ All configs in ```config.h```
 * ```RTTY_SPEED``` RTTY speed in bauds
 * ```RTTY_7BIT``` Use 7 bit RTTY
 * ```RTTY_USE_2_STOP_BITS``` Use 2 stop bits
-* ```APRS_SEND``` Optionally send APRS packet every ```TX_DELAY``` * ```RTTY_TO_APRS_RATIO``` ms
+* ```SEND_APRS``` Optionally send APRS packet every ```TX_DELAY``` * ```RTTY_TO_APRS_RATIO``` ms
 * ```APRS_CALLSIGN``` APRS callsign, 6 characters. If your callsign is shorter add spaces
 * ```APRS_SSID``` APRS SSID
 * ```APRS_COMMENT``` APRS comment
 * ```APRS_FREQUENCY``` APRS frequency in MHz
 * ```RTTY_TO_APRS_RATIO``` Number of RTTY frames between each APRS frame
+* ```SEND_MORSE``` Optionally send Morse message every ```TX_DELAY``` * ```RTTY_TO_MORSE_RATIO``` ms
+* ```MORSE_PREFIX``` Start of the Morse message (DE <callsign>)
+* ```SEND_MORSE_<value>``` Include <value> into the Morse message
+* ```MORSE_SUFFIX``` Optional end of the Morse message (ar^)
+* ```MORSE_WPM``` Morse speed in words per minute
+* ```RTTY_TO_MORSE_RATIO``` Number of RTTY frames between each Morse message
 * ```TX_POWER``` Power 0-7, (7 means 42.95 mW@434.150 MHz measured on E4406A)
 * ```ALLOW_DISABLE_BY_BUTTON``` Allow disabling device using button
-* ```TX_DELAY``` Delay between frames in milliseconds
-* ```LED_ENABLED``` Enable/disable LED blinking
+* ```TX_DELAY``` Delay between RTTY frames in milliseconds
+* ```LED_ENABLED``` Optionally /disable LED blinking (takes effect after approx. 10 minutes)
 
 
 Have a nice day ;)
@@ -62,6 +68,7 @@ Have a nice day ;)
      * Made the RTTY packet content configurable
      * Optionally turn off RTTY or APRS
      * Optionally turn off LED blinking
+     * Added Morse (CW) support
 
 
 # TODO
