@@ -23,7 +23,7 @@
 #include "locator.h"
 ///////////////////////////// test mode /////////////
 const unsigned char test = 0; // 0 - normal, 1 - short frame only cunter, height, flag
-char callsign[15] = {CALLSIGN};
+char callsign[15] = {RTTY_CALLSIGN};
 char rtty_comment[25] = {RTTY_COMMENT};
 
 #define GREEN  GPIO_Pin_7
@@ -33,6 +33,9 @@ unsigned int send_cun;        //frame counter
 char status[2] = {'N'};
 int voltage;
 volatile int adc_bottom = 2000;
+
+unsigned int led_timeout = 600 * RTTY_SPEED; // Approx. 10 minutes
+volatile uint8_t led_enabled = 1; // Flag to disable LEDs after a timeout
 
 volatile char flaga = 0;
 uint16_t CRC_rtty = 0x12ab;  //checksum
@@ -51,6 +54,7 @@ volatile uint8_t disable_armed = 0;
 
 void send_rtty_packet();
 uint16_t gps_CRC16_checksum (char *string);
+void send_aprs_packet();
 
 
 /**
@@ -95,7 +99,7 @@ void TIM2_IRQHandler(void) {
         send_rtty_status = send_rtty((char *) rtty_buf);
         if (!disable_armed){
           if (send_rtty_status == rttyEnd) {
-            GPIO_SetBits(GPIOB, RED);
+            if (led_enabled) GPIO_SetBits(GPIOB, RED);
             if (*(++rtty_buf) == 0) {
               tx_on = 0;
               tx_on_delay = TX_DELAY / (1000/RTTY_SPEED);
@@ -104,10 +108,10 @@ void TIM2_IRQHandler(void) {
             }
           } else if (send_rtty_status == rttyOne) {
             radio_rw_register(0x73, RTTY_DEVIATION, 1);
-            GPIO_SetBits(GPIOB, RED);
+            if (led_enabled) GPIO_SetBits(GPIOB, RED);
           } else if (send_rtty_status == rttyZero) {
             radio_rw_register(0x73, 0x00, 1);
-            GPIO_ResetBits(GPIOB, RED);
+            if (led_enabled) GPIO_ResetBits(GPIOB, RED);
           }
         }
       }
@@ -117,17 +121,19 @@ void TIM2_IRQHandler(void) {
       }
       if (--cun == 0) {
         if (pun) {
-          GPIO_ResetBits(GPIOB, GREEN);
+          if (led_enabled) GPIO_ResetBits(GPIOB, GREEN);
           pun = 0;
         } else {
           if (flaga & 0x80) {
-            GPIO_SetBits(GPIOB, GREEN);
+            if (led_enabled) GPIO_SetBits(GPIOB, GREEN);
           }
           pun = 1;
         }
         cun = 200;
       }
     }
+
+    if (!LED_ENABLED && led_enabled && !--led_timeout) led_enabled = 0;
 
   }
 
@@ -145,7 +151,7 @@ int main(void) {
   delay_init();
   ublox_init();
 
-  GPIO_SetBits(GPIOB, RED);
+  if (led_enabled) GPIO_SetBits(GPIOB, RED);
   USART_SendData(USART3, 0xc);
 
   radio_soft_reset();
@@ -171,27 +177,17 @@ int main(void) {
   tx_enable = 1;
 
   aprs_init();
-  radio_enable_tx();
-
   uint8_t rtty_before_aprs_left = RTTY_TO_APRS_RATIO;
-
 
   while (1) {
     if (tx_on == 0 && tx_enable) {
       if (rtty_before_aprs_left){
-        send_rtty_packet();
+        if (SEND_RTTY) send_rtty_packet();
+        else _delay_ms(TX_DELAY);
         rtty_before_aprs_left --;
       } else {
         rtty_before_aprs_left = RTTY_TO_APRS_RATIO;
-        radio_enable_tx();
-        GPSEntry gpsData;
-        ublox_get_last_data(&gpsData);
-        USART_Cmd(USART1, DISABLE);
-        int8_t temperature = radio_read_temperature();
-        uint16_t voltage = (uint16_t) ADCVal[0] * 600 / 4096;
-        aprs_send_position(gpsData, temperature, voltage);
-        USART_Cmd(USART1, ENABLE);
-        radio_disable_tx();
+        if (SEND_APRS) send_aprs_packet();
       }
 
     } else {
@@ -221,23 +217,33 @@ void send_rtty_packet() {
     longlat2locator(gpsData.lon_raw, gpsData.lat_raw, locator);
   }
 
-  sprintf(buf_rtty, "$$$$%s,%d,%02u:%02u:%02u,%s%d.%04ld,%s%d.%04ld,%ld,%ld,%s,%d,%d.%d,%d,%d,%d,%02x",
-			  callsign,
-			  send_cun,
-              gpsData.hours, gpsData.minutes, gpsData.seconds,
-              gpsData.lat_raw < 0 ? "-" : "", lat_d, lat_fl,
-              gpsData.lon_raw < 0 ? "-" : "", lon_d, lon_fl,
-              (gpsData.alt_raw / 1000),
-              gpsData.speed_raw,
-              RTTY_WWL ? locator : rtty_comment,
-              si4032_temperature,
-              voltage/100, voltage-voltage/100*100,
-              gpsData.sats_raw,
-              gpsData.ok_packets,
-              gpsData.bad_packets,
-              flaga);
+  int packetLength = sprintf(buf_rtty, "$$$$%s,%d", callsign, send_cun);
+              if (SEND_RTTY_TIME)
+                packetLength += sprintf(buf_rtty + packetLength, ",%02u:%02u:%02u", gpsData.hours, gpsData.minutes, gpsData.seconds);
+              if (SEND_RTTY_LATLON)
+                packetLength += sprintf(buf_rtty + packetLength, ",%s%d.%04ld,%s%d.%04ld",
+                  gpsData.lat_raw < 0 ? "-" : "", lat_d, lat_fl,
+                  gpsData.lon_raw < 0 ? "-" : "", lon_d, lon_fl);
+              if (SEND_RTTY_HEIGHT)
+                packetLength += sprintf(buf_rtty + packetLength, ",%ld", (gpsData.alt_raw / 1000));
+              if (SEND_RTTY_SPEED)
+                packetLength += sprintf(buf_rtty + packetLength, ",%ld", gpsData.speed_raw);
+              if (SEND_RTTY_MESSAGE)
+                packetLength += sprintf(buf_rtty + packetLength, ",%s", RTTY_WWL ? locator : rtty_comment);
+              if (SEND_RTTY_TEMPERATURE)
+                packetLength += sprintf(buf_rtty + packetLength, ",%d", si4032_temperature);
+              if (SEND_RTTY_VOLTAGE)
+                packetLength += sprintf(buf_rtty + packetLength, ",%d.%d", voltage/100, voltage-voltage/100*100);
+              if (SEND_RTTY_SATELLITES)
+                packetLength += sprintf(buf_rtty + packetLength, ",%d", gpsData.sats_raw);
+              if (SEND_RTTY_GPSDATA)
+                packetLength += sprintf(buf_rtty + packetLength, ",%d,%d,%02x",
+                  gpsData.ok_packets,
+                  gpsData.bad_packets,
+                  flaga);
+
   CRC_rtty = gps_CRC16_checksum(buf_rtty + 4);
-  sprintf(buf_rtty, "%s*%04X\n", buf_rtty, CRC_rtty & 0xffff);
+  sprintf(buf_rtty + packetLength, "*%04X\n", CRC_rtty & 0xffff);
   rtty_buf = buf_rtty;
   radio_enable_tx();
   tx_on = 1;
@@ -258,6 +264,18 @@ uint16_t gps_CRC16_checksum(char *string) {
     }
   }
   return crc;
+}
+
+void send_aprs_packet() {
+  radio_enable_tx();
+  GPSEntry gpsData;
+  ublox_get_last_data(&gpsData);
+  USART_Cmd(USART1, DISABLE);
+  int8_t temperature = radio_read_temperature();
+  uint16_t voltage = (uint16_t) ADCVal[0] * 600 / 4096;
+  aprs_send_position(gpsData, temperature, voltage);
+  USART_Cmd(USART1, ENABLE);
+  radio_disable_tx();
 }
 
 
