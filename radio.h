@@ -31,6 +31,8 @@ void radio_soft_reset();
 
 void radio_enable_tx();
 
+void radio_inhibit_tx();
+
 int8_t radio_read_temperature();
 
 #ifdef __cplusplus
